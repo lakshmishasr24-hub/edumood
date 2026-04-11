@@ -136,7 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector(`.mood-btn[data-mood="${moodKey}"]`).classList.add('active-mood');
         
         const moodProfile = MOODS[moodKey];
-        body.style.backgroundColor = moodProfile.hex + '1a'; 
+        // Increased opacity from '1a' to '66' (40%) to powerfully tint the photograph via CSS blend modes
+        body.style.backgroundColor = moodProfile.hex + '66'; 
         moodLabel.style.color = moodProfile.hex;
 
         // Dynamic Gita Glow

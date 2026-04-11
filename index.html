@@ -39,8 +39,10 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="transition-colors duration-1000 ease-in-out bg-gray-50 min-h-screen text-gray-800 relative overflow-x-hidden font-sans">
+<body class="transition-colors duration-1000 ease-in-out min-h-screen text-gray-800 relative overflow-x-hidden font-sans bg-cover bg-center bg-fixed" style="background-image: url('index-bg.png'); background-color: #f8fafc; background-blend-mode: multiply;">
     
+    <!-- Light frosting to ensure cards stand out clearly against the image -->
+    <div class="absolute inset-0 bg-white/20 z-0 pointer-events-none backdrop-blur-[2px]"></div>
     <!-- Floating Shapes (CSS Animated) -->
     <div id="shape1" class="floating-shape bg-white/20 w-64 h-64 rounded-full absolute -top-10 -left-20 blur-3xl mix-blend-overlay"></div>
     <div id="shape2" class="floating-shape bg-white/20 w-96 h-96 rounded-full absolute top-1/4 -right-10 blur-3xl mix-blend-overlay delay-1000"></div>
