@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - EduMood</title>
+    <!-- Preload Firebase Modules to prevent waterfall delays -->
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#14b8a6', // calming teal
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 relative overflow-x-hidden font-sans">
+    
+    <!-- Floating Shapes -->
+    <div class="floating-shape bg-teal-200/30 w-64 h-64 rounded-full absolute -top-10 -left-20 blur-3xl mix-blend-multiply"></div>
+    <div class="floating-shape bg-blue-200/30 w-96 h-96 rounded-full absolute top-1/4 -right-10 blur-3xl mix-blend-multiply delay-1000"></div>
+
+    <div class="container mx-auto px-4 py-8 max-w-4xl relative z-10 flex flex-col min-h-screen">
+        
+        <!-- Navigation -->
+        <nav class="flex justify-between items-center mb-10">
+            <a href="index.html" class="flex items-center gap-2 text-gray-600 hover:text-teal-600 font-medium transition-colors">
+                <i class="fas fa-arrow-left"></i> Back to EduMood
+            </a>
+            <button id="btn-logout" class="px-3 py-2 rounded-full bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-all text-sm font-medium flex items-center gap-2 shadow-sm">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </nav>
+
+        <!-- Profile Header -->
+        <div class="bg-white/80 backdrop-blur-md rounded-3xl p-8 shadow-sm border border-white/50 mb-8 flex flex-col md:flex-row items-center gap-6 relative">
+            <div class="relative group">
+                <div id="profile-avatar" class="w-24 h-24 rounded-full bg-teal-100 border-4 border-white shadow text-teal-600 flex items-center justify-center text-4xl font-bold">
+                    T
+                </div>
+            </div>
+            
+            <div class="flex-1 text-center md:text-left">
+                <h1 id="profile-name" class="text-3xl font-bold text-gray-900 mb-1">Teacher Name</h1>
+                <p id="profile-email" class="text-gray-500 font-medium mb-3">teacher@school.com</p>
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-semibold border border-green-100">
+                    <i class="fas fa-seedling"></i> You're growing every day
+                </div>
+            </div>
+
+            <button id="btn-edit-profile" class="px-5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-teal-300 hover:text-teal-600 shadow-sm transition-all font-medium flex items-center gap-2 text-gray-700">
+                <i class="fas fa-pen text-sm"></i> Edit Profile
+            </button>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Insights & Stats -->
+            <div class="flex flex-col gap-8 md:col-span-1">
+                
+                <!-- Mood Insights -->
+                <div class="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-lightbulb text-yellow-500"></i> Insights
+                    </h2>
+                    
+                    <div class="mb-4">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Most Frequent Mood</p>
+                        <div class="flex items-center gap-3">
+                            <div id="top-mood-color" class="w-4 h-4 rounded-full bg-gray-200"></div>
+                            <span id="top-mood-name" class="font-medium text-gray-800">Not enough data</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Total Check-ins</p>
+                        <p id="total-checkins" class="text-2xl font-bold text-teal-600">0</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: History & Favorites -->
+            <div class="md:col-span-2 flex flex-col gap-8">
+                
+                <!-- Recent Mood History -->
+                <div class="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 flex flex-col h-80">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fas fa-history text-blue-500"></i> Recent History
+                        </h2>
+                        <button id="btn-download-csv" class="text-sm text-teal-600 hover:text-teal-700 hover:underline flex items-center gap-1">
+                            <i class="fas fa-download"></i> CSV
+                        </button>
+                    </div>
+
+                    <div id="history-list" class="flex-1 overflow-y-auto pr-2 space-y-3">
+                        <!-- History Items injected here -->
+                    </div>
+                </div>
+
+                <!-- Your Favorites -->
+                <div class="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 flex flex-col h-80">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-heart text-red-500"></i> Saved Quotes
+                    </h2>
+
+                    <div id="favorites-list" class="flex-1 overflow-y-auto pr-2 space-y-3">
+                        <!-- Favorites Items injected here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="modal-edit-profile" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center opacity-0 transition-opacity">
+        <div class="bg-white rounded-2xl p-8 max-w-sm w-full m-4 shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Edit Profile</h3>
+                <button class="modal-close-edit text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="form-edit-profile" class="flex flex-col gap-4">
+                <div id="edit-error" class="hidden text-sm text-red-500 bg-red-50 p-2 rounded border border-red-100"></div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="edit-name" class="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 outline-none text-sm" required>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700">Display Email <span class="text-xs text-gray-400 font-normal">(Login email cannot be changed here)</span></label>
+                    <input type="email" id="edit-email" class="w-full px-3 py-2 rounded-lg bg-gray-100 border border-gray-200 cursor-not-allowed outline-none text-sm text-gray-500" disabled>
+                </div>
+
+                <div class="flex flex-col gap-1 pt-2 border-t border-gray-100">
+                    <label class="text-sm font-medium text-gray-700">New Password <span class="text-xs text-gray-400 font-normal">(Leave blank to keep)</span></label>
+                    <input type="password" id="edit-password" class="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 outline-none text-sm" placeholder="Min. 6 characters">
+                </div>
+
+                <button type="submit" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-2.5 rounded-xl shadow transition-all mt-2">
+                    Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="profile.js"></script>
+</body>
+</html>

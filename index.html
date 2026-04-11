@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMood</title>
+    <!-- Preload Firebase Modules to prevent waterfall delays -->
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        inspired: '#22c55e',
+                        focused: '#3b82f6',
+                        overwhelmed: '#f97316',
+                        fatigued: '#a855f7',
+                        evaluative: '#ef4444',
+                        doubt: '#eab308',
+                        reflective: '#14b8a6',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="transition-colors duration-1000 ease-in-out bg-gray-50 min-h-screen text-gray-800 relative overflow-x-hidden font-sans">
+    
+    <!-- Floating Shapes (CSS Animated) -->
+    <div id="shape1" class="floating-shape bg-white/20 w-64 h-64 rounded-full absolute -top-10 -left-20 blur-3xl mix-blend-overlay"></div>
+    <div id="shape2" class="floating-shape bg-white/20 w-96 h-96 rounded-full absolute top-1/4 -right-10 blur-3xl mix-blend-overlay delay-1000"></div>
+    <div id="shape3" class="floating-shape bg-white/20 w-72 h-72 rounded-full absolute bottom-10 left-1/4 blur-3xl mix-blend-overlay delay-2000"></div>
+
+    <!-- Background Music -->
+    <audio id="bg-music" loop>
+        <!-- Royalty free lo-fi URL -->
+        <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="container mx-auto px-4 py-8 max-w-5xl relative z-10 flex flex-col min-h-screen">
+        
+        <!-- Header Controls -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <a href="profile.html" class="flex items-center gap-3 mb-1 opacity-0 transition-all duration-500 hover:opacity-80 cursor-pointer group" id="user-profile-widget" title="View Profile">
+                    <div class="w-9 h-9 rounded-full bg-teal-100 border border-teal-200 text-teal-700 flex items-center justify-center font-bold text-sm shadow-sm group-hover:bg-teal-200 transition-colors" id="user-avatar">
+                        <i class="far fa-user"></i>
+                    </div>
+                    <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 drop-shadow-sm group-hover:text-teal-700 transition-colors" id="user-greeting">Welcome! 👋</h1>
+                </a>
+                <p class="text-sm text-gray-600 font-medium ml-12 md:ml-0">Take a breath. Reset. You're doing better than you think.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 ml-12 md:ml-0">
+                <button id="btn-music" class="w-10 h-10 rounded-full bg-white/50 backdrop-blur shadow hover:bg-white/80 transition-all flex items-center justify-center text-gray-700" title="Toggle Music">
+                    <i class="fas fa-music"></i>
+                </button>
+                <button id="btn-tracker" class="px-4 py-2 rounded-full bg-white/50 backdrop-blur shadow hover:bg-white/80 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-chart-line"></i> Mood Tracker
+                </button>
+                <button id="btn-favorites" class="px-4 py-2 rounded-full bg-white/50 backdrop-blur shadow hover:bg-white/80 transition-all text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-heart text-red-500"></i> Saved
+                </button>
+                <button id="btn-logout" class="px-3 py-2 rounded-full bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-all text-sm font-medium flex items-center gap-2 shadow-sm" title="Sign Out">
+                    <i class="fas fa-sign-out-alt"></i> <span class="hidden md:inline">Logout</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mood Selection UI -->
+        <div class="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/20 mb-8 mx-auto w-full max-w-3xl text-center">
+            <h2 class="text-xl font-semibold mb-6 flex items-center justify-center gap-2">
+                How are you feeling right now?
+                <button id="btn-surprise" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full transition-colors ml-2 text-gray-700" title="Pick a random mood">
+                    <i class="fas fa-dice"></i> Surprise Me
+                </button>
+            </h2>
+
+            <div class="flex flex-wrap justify-center gap-3" id="mood-grid">
+                <button class="mood-btn px-5 py-3 rounded-xl font-medium transition-all transform hover:-translate-y-1 hover:shadow-md bg-white border border-gray-200 text-gray-700 flex items-center gap-2" data-mood="inspired">
+                    <span>🟢</span> Inspired
+                </button>
+                <button class="mood-btn px-5 py-3 rounded-xl font-medium transition-all transform hover:-translate-y-1 hover:shadow-md bg-white border border-gray-200 text-gray-700 flex items-center gap-2" data-mood="focused">
+                    <span>🔵</span> Focused
+                </button>
+                <button class="mood-btn px-5 py-3 rounded-xl font-medium transition-all transform hover:-translate-y-1 hover:shadow-md bg-white border border-gray-200 text-gray-700 flex items-center gap-2" data-mood="overwhelmed">
+                    <span>🟠</span> Overwhelmed
+                </button>
+                <button class="mood-btn px-5 py-3 rounded-xl font-medium transition-all transform hover:-translate-y-1 hover:shadow-md bg-white border border-gray-200 text-gray-700 flex items-center gap-2" data-mood="fatigued">
+                    <span>🟣</span> Fatigued
+                </button>
+                <button class="mood-btn px-5 py-3 rounded-xl font-medium transition-all transform hover:-translate-y-1 hover:shadow-md bg-white border border-gray-200 text-gray-700 flex items-center gap-2" data-mood="evaluative">
+                    <span>🔴</span> Evaluative
+                </button>
+                <button class="mood-btn px-5 py-3 rounded-xl font-medium transition-all transform hover:-translate-y-1 hover:shadow-md bg-white border border-gray-200 text-gray-700 flex items-center gap-2" data-mood="doubt">
+                    <span>🟡</span> Doubt
+                </button>
+                <button class="mood-btn px-5 py-3 rounded-xl font-medium transition-all transform hover:-translate-y-1 hover:shadow-md bg-white border border-gray-200 text-gray-700 flex items-center gap-2" data-mood="reflective">
+                    <span>🩵</span> Reflective
+                </button>
+            </div>
+        </div>
+
+        <!-- Dynamic Content Display (Hidden initially) -->
+        <div id="content-display" class="hidden opacity-0 flex-1 transition-opacity duration-700 max-w-4xl mx-auto w-full">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                
+                <!-- Left Column: Quote & Task -->
+                <div class="flex flex-col gap-6">
+                    <!-- Quote Box -->
+                    <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-8 shadow-sm border-l-4 border-l-transparent relative" id="quote-card">
+                        <button id="btn-save-quote" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors text-xl">
+                            <i class="far fa-heart" id="save-icon"></i>
+                        </button>
+                        <h3 class="text-xs uppercase font-bold tracking-wider text-gray-500 mb-4" id="content-mood-label">Cognitive Alignment</h3>
+                        <blockquote class="text-xl md:text-2xl font-serif italic text-gray-800 leading-relaxed mb-4" id="display-quote">
+                            "Motivation quote goes here."
+                        </blockquote>
+                        <div class="text-xs font-semibold px-2 py-1 bg-white inline-block rounded border text-gray-500" id="quote-source">AI Generated</div>
+                    </div>
+
+                    <!-- Action Box -->
+                    <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-8 shadow-sm">
+                        <h3 class="text-xs uppercase font-bold tracking-wider text-gray-500 mb-4"><i class="fas fa-bolt text-yellow-500 mr-2"></i> Behavioral Activation</h3>
+                        <p class="text-lg text-gray-700" id="display-action">Action step goes here.</p>
+                    </div>
+
+                    <!-- Bhagavad Gita Card -->
+                    <div id="gita-card" class="bg-white/60 backdrop-blur-lg rounded-2xl p-6 shadow-sm border-l-4 border-gray-200 relative transition-all duration-500">
+                        <h3 class="text-[10px] uppercase font-bold tracking-wider mb-3 flex items-center gap-2 text-gray-500" id="gita-heading-text">
+                            <span>🕉️</span> A message for your current state 🙏
+                        </h3>
+                        <blockquote class="text-base font-serif italic text-gray-800 leading-relaxed mb-3 pr-6 transition-opacity duration-300" id="display-gita-quote">
+                            "You have the right to perform your duty, but not to the fruits of your actions."
+                        </blockquote>
+                        <div class="text-xs font-semibold mt-2 text-right transition-opacity duration-300 text-gray-400" id="display-gita-ref">
+                            — Bhagavad Gita 2.47
+                        </div>
+                        <button id="btn-save-gita" class="absolute bottom-4 left-6 text-gray-400 hover:text-red-500 transition-colors text-lg" title="Save this Gita quote">
+                            <i class="far fa-heart" id="save-gita-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column: Video -->
+                <div class="bg-black rounded-2xl overflow-hidden shadow-lg aspect-video h-fit flex items-center justify-center bg-gray-900 border-4 border-white/30">
+                    <iframe id="display-video" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+            
+            <div class="text-center mt-8">
+                <button id="btn-refresh-content" class="px-6 py-3 rounded-full bg-white hover:bg-gray-50 shadow-md text-gray-700 font-medium transition-transform transform hover:scale-105">
+                    <i class="fas fa-sync-alt mr-2"></i> Unroll New Content
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Tracker Modal -->
+    <div id="modal-tracker" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center opacity-0 transition-opacity">
+        <div class="bg-white rounded-2xl p-8 max-w-lg w-full m-4 shadow-2xl transform scale-95 transition-transform duration-300" id="modal-tracker-panel">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">Weekly Mood Tracker</h3>
+                <button class="modal-close text-gray-500 hover:text-gray-800"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <p class="text-gray-600 text-sm mb-6">Tracking your daily mood helps you understand emotional patterns over time.</p>
+            <div class="w-full h-64">
+                <canvas id="moodChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Favorites Modal -->
+    <div id="modal-favorites" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center opacity-0 transition-opacity">
+        <div class="bg-white rounded-2xl p-8 max-w-lg w-full m-4 shadow-2xl transform scale-95 transition-transform duration-300 h-[80vh] flex flex-col" id="modal-favorites-panel">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-heart text-red-500"></i> Saved Quotes</h3>
+                <button class="modal-close text-gray-500 hover:text-gray-800"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-4" id="favorites-list">
+                <!-- Favorites injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="data.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

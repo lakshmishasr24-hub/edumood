@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - EduMood</title>
+    <!-- Preload Firebase Modules to prevent waterfall delays -->
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#14b8a6', // calming teal
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen relative overflow-hidden font-sans flex items-center justify-center">
+
+    <!-- Floating Shapes for calming effect -->
+    <div class="floating-shape bg-teal-200/30 w-64 h-64 rounded-full absolute -top-10 -left-20 blur-3xl mix-blend-multiply"></div>
+    <div class="floating-shape bg-blue-200/30 w-96 h-96 rounded-full absolute top-1/4 -right-10 blur-3xl mix-blend-multiply delay-1000"></div>
+    <div class="floating-shape bg-purple-200/30 w-72 h-72 rounded-full absolute bottom-10 left-1/4 blur-3xl mix-blend-multiply delay-2000"></div>
+
+    <div class="relative z-10 w-full max-w-md px-6">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold tracking-tight text-gray-900 drop-shadow-sm mb-2">EduMood</h1>
+            <p class="text-gray-600 font-medium">Your personal space to breathe and reset.</p>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-white/50 transition-all duration-500 overflow-hidden relative">
+            
+            <!-- Global Error Banner -->
+            <div id="auth-error" class="hidden bg-red-50 text-red-600 border border-red-200 text-sm px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="auth-error-text">Error message</span>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="flex flex-col gap-5 transition-all duration-500">
+                <h2 class="text-2xl font-semibold text-gray-800 text-center mb-2">Welcome Back</h2>
+                
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700 ml-1">Email <span class="text-red-400">*</span></label>
+                    <div class="relative">
+                        <i class="far fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="email" id="login-email" class="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all placeholder:text-gray-400 text-sm" placeholder="teacher@school.com">
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700 ml-1">Password <span class="text-red-400">*</span></label>
+                    <div class="relative flex items-center">
+                        <i class="fas fa-lock absolute left-4 text-gray-400"></i>
+                        <input type="password" id="login-password" class="w-full pl-10 pr-12 py-3 rounded-xl bg-white border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all placeholder:text-gray-400 text-sm" placeholder="••••••••">
+                        <button type="button" class="absolute right-4 text-gray-400 hover:text-gray-600 toggle-password text-sm"><i class="far fa-eye"></i></button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center text-sm px-1">
+                    <label class="flex items-center gap-2 text-gray-600 cursor-pointer group">
+                        <div class="relative flex items-center justify-center">
+                            <input type="checkbox" id="login-remember" class="peer appearance-none w-4 h-4 rounded border border-gray-300 checked:bg-teal-500 checked:border-teal-500 transition-colors cursor-pointer">
+                            <i class="fas fa-check absolute text-[10px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity"></i>
+                        </div>
+                        <span class="group-hover:text-gray-800 transition-colors">Remember me</span>
+                    </label>
+                    <a href="#" class="text-teal-600 hover:text-teal-700 font-medium hover:underline">Forgot?</a>
+                </div>
+
+                <button type="submit" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-3 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 mt-2">
+                    Sign In
+                </button>
+
+                <p class="text-center text-sm text-gray-500 mt-2">
+                    Don't have an account? 
+                    <button type="button" id="show-signup" class="text-teal-600 hover:text-teal-700 font-medium hover:underline ml-1">Create one</button>
+                </p>
+            </form>
+
+            <!-- Signup Form (Hidden by default) -->
+            <form id="signup-form" class="flex flex-col gap-4 hidden transition-all duration-500">
+                <h2 class="text-2xl font-semibold text-gray-800 text-center mb-2">Create Account</h2>
+                
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700 ml-1">Full Name <span class="text-red-400">*</span></label>
+                    <div class="relative">
+                        <i class="far fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="signup-name" class="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all placeholder:text-gray-400 text-sm" placeholder="Jane Doe">
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700 ml-1">Email <span class="text-red-400">*</span></label>
+                    <div class="relative">
+                        <i class="far fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="email" id="signup-email" class="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all placeholder:text-gray-400 text-sm" placeholder="teacher@school.com">
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700 ml-1">Password <span class="text-red-400">*</span></label>
+                    <div class="relative flex items-center">
+                        <i class="fas fa-lock absolute left-4 text-gray-400"></i>
+                        <input type="password" id="signup-password" class="w-full pl-10 pr-12 py-3 rounded-xl bg-white border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all placeholder:text-gray-400 text-sm" placeholder="Min. 6 characters">
+                        <button type="button" class="absolute right-4 text-gray-400 hover:text-gray-600 toggle-password text-sm"><i class="far fa-eye"></i></button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-gray-700 ml-1">Confirm Password <span class="text-red-400">*</span></label>
+                    <div class="relative flex items-center">
+                        <i class="fas fa-lock absolute left-4 text-gray-400"></i>
+                        <input type="password" id="signup-confirm" class="w-full pl-10 pr-12 py-3 rounded-xl bg-white border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all placeholder:text-gray-400 text-sm" placeholder="Repeat password">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-3 rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 mt-4">
+                    Sign Up
+                </button>
+
+                <p class="text-center text-sm text-gray-500 mt-2">
+                    Already have an account? 
+                    <button type="button" id="show-login" class="text-teal-600 hover:text-teal-700 font-medium hover:underline ml-1">Sign in</button>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="auth.js"></script>
+</body>
+</html>
