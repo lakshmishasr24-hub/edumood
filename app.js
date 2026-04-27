@@ -3,6 +3,7 @@ import { doc, getDoc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy 
 import { auth, db } from "./firebase-init.js";
 import { MOODS, MOOD_DATABASE } from "./data.js";
 import { gitaQuotes } from "./gita-data.js";
+import { generateMoodContent, analyzeMoodTrend } from "./ai-service.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
@@ -158,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logMoodToFirestore(moodKey);
     }
 
-    function renderContent(moodKey) {
+    async function renderContent(moodKey) {
         quoteText.classList.remove('fade-in');
         quoteText.classList.add('fade-out');
         actionText.classList.remove('fade-in');
@@ -168,27 +169,63 @@ document.addEventListener('DOMContentLoaded', () => {
         gitaRefText.classList.remove('fade-in');
         gitaRefText.classList.add('fade-out');
 
-        setTimeout(() => {
-            const dbRef = MOOD_DATABASE[moodKey];
-            let idx = moodIndexes[moodKey];
-            
-            if (idx >= dbRef.quotes.length) {
-                idx = 0; 
-                dbRef.quotes.sort(() => Math.random() - 0.5);
-                dbRef.tasks.sort(() => Math.random() - 0.5);
-                dbRef.videos.sort(() => Math.random() - 0.5);
-            }
-            
-            // Standard Content
-            moodLabel.textContent = `${MOODS[moodKey].label} Mode`;
-            quoteText.textContent = `"${dbRef.quotes[idx]}"`;
-            actionText.textContent = dbRef.tasks[idx];
-            videoIframe.src = dbRef.videos[idx];
-            
-            checkIfSaved(dbRef.quotes[idx]);
-            moodIndexes[moodKey]++;
+        // Wait for fade-out
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-            // Gita Content
+        // Show Loading State
+        quoteText.innerHTML = '<i class="fas fa-spinner fa-spin text-teal-500"></i> Generating personalized quote...';
+        actionText.innerHTML = '<i class="fas fa-spinner fa-spin text-yellow-500"></i> Finding action...';
+        gitaQuoteText.innerHTML = '<i class="fas fa-spinner fa-spin text-orange-500"></i> Seeking wisdom...';
+        gitaRefText.textContent = "";
+
+        moodLabel.textContent = `${MOODS[moodKey].label} Mode`;
+
+        quoteText.classList.remove('fade-out');
+        quoteText.classList.add('fade-in');
+        actionText.classList.remove('fade-out');
+        actionText.classList.add('fade-in');
+        gitaQuoteText.classList.remove('fade-out');
+        gitaQuoteText.classList.add('fade-in');
+
+        // Fetch AI Data
+        const aiData = await generateMoodContent(MOODS[moodKey].label);
+
+        // Track local DB index for videos and fallback
+        const dbRef = MOOD_DATABASE[moodKey];
+        let idx = moodIndexes[moodKey];
+        if (idx >= dbRef.quotes.length) {
+            idx = 0; 
+            dbRef.quotes.sort(() => Math.random() - 0.5);
+            dbRef.tasks.sort(() => Math.random() - 0.5);
+            dbRef.videos.sort(() => Math.random() - 0.5);
+        }
+        videoIframe.src = dbRef.videos[idx];
+        moodIndexes[moodKey]++;
+
+        // Fade out loading
+        quoteText.classList.remove('fade-in');
+        quoteText.classList.add('fade-out');
+        actionText.classList.remove('fade-in');
+        actionText.classList.add('fade-out');
+        gitaQuoteText.classList.remove('fade-in');
+        gitaQuoteText.classList.add('fade-out');
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const quoteSourceBadge = document.getElementById('quote-source');
+
+        if (aiData && aiData.quote && aiData.action && aiData.gita_quote && aiData.gita_reference) {
+            quoteText.textContent = `"${aiData.quote}"`;
+            actionText.textContent = aiData.action;
+            gitaQuoteText.textContent = `"${aiData.gita_quote}"`;
+            gitaRefText.textContent = `— ${aiData.gita_reference}`;
+            if (quoteSourceBadge) quoteSourceBadge.textContent = "AI Generated ✨";
+        } else {
+            // Local Fallback
+            quoteText.textContent = `"${dbRef.quotes[idx - 1] || dbRef.quotes[0]}"`;
+            actionText.textContent = dbRef.tasks[idx - 1] || dbRef.tasks[0];
+            if (quoteSourceBadge) quoteSourceBadge.textContent = "From Library";
+            
             const gitaDB = gitaQuotes[moodKey];
             let gIdx = gitaIndexes[moodKey];
             if (gIdx >= gitaDB.length) {
@@ -197,19 +234,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             gitaQuoteText.textContent = `"${gitaDB[gIdx].text}"`;
             gitaRefText.textContent = `— ${gitaDB[gIdx].reference}`;
-            
-            checkIfGitaSaved(gitaDB[gIdx].text);
             gitaIndexes[moodKey] = gIdx + 1;
+        }
 
-            quoteText.classList.remove('fade-out');
-            quoteText.classList.add('fade-in');
-            actionText.classList.remove('fade-out');
-            actionText.classList.add('fade-in');
-            gitaQuoteText.classList.remove('fade-out');
-            gitaQuoteText.classList.add('fade-in');
-            gitaRefText.classList.remove('fade-out');
-            gitaRefText.classList.add('fade-in');
-        }, 300);
+        checkIfSaved(quoteText.textContent.replace(/"/g, ''));
+        checkIfGitaSaved(gitaQuoteText.textContent.replace(/"/g, ''));
+
+        // Fade back in
+        quoteText.classList.remove('fade-out');
+        quoteText.classList.add('fade-in');
+        actionText.classList.remove('fade-out');
+        actionText.classList.add('fade-in');
+        gitaQuoteText.classList.remove('fade-out');
+        gitaQuoteText.classList.add('fade-in');
+        gitaRefText.classList.remove('fade-out');
+        gitaRefText.classList.add('fade-in');
     }
 
     moodBtns.forEach(btn => {
@@ -417,16 +456,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let chartInstance = null;
 
-    btnTracker.addEventListener('click', () => {
+    btnTracker.addEventListener('click', async () => {
         openModal(modalTracker);
         
-        // Calculate max score per day from history
+        // --- Display Loading for AI ---
+        const aiInsightContainer = document.getElementById('ai-insight-container');
+        const aiInsightText = document.getElementById('ai-insight-text');
+        
+        if (aiInsightContainer && aiInsightText) {
+            aiInsightContainer.classList.remove('hidden');
+            aiInsightText.innerHTML = '<i class="fas fa-sync-alt fa-spin text-teal-400 mr-2"></i> Analyzing your emotional resilience...';
+            setTimeout(() => aiInsightContainer.classList.remove('opacity-0'), 10);
+        }
+
+        // Calculate max score per day from history AND frequency
         const dynamicMoodLog = {};
+        const moodFrequency = {};
+        
         rawMoodHistory.forEach(entry => {
             const dateStr = entry.timestamp.split('T')[0];
             if (!dynamicMoodLog[dateStr] || entry.score > dynamicMoodLog[dateStr]) {
                 dynamicMoodLog[dateStr] = entry.score; // Store highest emotional score of the day
             }
+            
+            const label = entry.label || entry.moodName;
+            moodFrequency[label] = (moodFrequency[label] || 0) + 1;
         });
 
         // Prepare Data for Last 7 Days
@@ -444,6 +498,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('moodChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
+        // Chart styling enhancements
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(20, 184, 166, 0.4)');
+        gradient.addColorStop(1, 'rgba(20, 184, 166, 0.05)');
+
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
@@ -452,10 +511,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     label: 'Mood Vitality (1-6)',
                     data: data,
                     borderColor: '#14b8a6', // Teal
-                    backgroundColor: 'rgba(20, 184, 166, 0.2)',
+                    backgroundColor: gradient,
+                    borderWidth: 3,
                     tension: 0.4,
                     fill: true,
                     pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
                     pointRadius: 6,
                     pointHoverRadius: 8
                 }]
@@ -464,10 +526,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, max: 7, ticks: { display: false } }
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: { 
+                        beginAtZero: true, 
+                        max: 7, 
+                        ticks: { display: false },
+                        border: { dash: [4, 4] }
+                    }
                 },
-                plugins: { legend: { display: false } }
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        titleColor: '#374151',
+                        bodyColor: '#374151',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 10,
+                        boxPadding: 4,
+                        callbacks: {
+                            label: function(context) {
+                                return ' Vitality: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
             }
         });
+        
+        // Calculate AI Insight
+        if (aiInsightText && Object.keys(moodFrequency).length > 0) {
+            const analysis = await analyzeMoodTrend(moodFrequency);
+            if (analysis) {
+                // Fade out then in
+                aiInsightText.style.opacity = '0';
+                setTimeout(() => {
+                    aiInsightText.innerHTML = analysis;
+                    aiInsightText.style.opacity = '1';
+                    aiInsightText.style.transition = 'opacity 0.5s ease-in-out';
+                }, 300);
+            } else {
+                aiInsightText.innerHTML = "Keep tracking your mood to unlock AI resilience insights.";
+            }
+        } else if (aiInsightText) {
+            aiInsightText.innerHTML = "Log your first mood to see AI insights!";
+        }
     });
 });
